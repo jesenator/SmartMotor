@@ -5,6 +5,7 @@
 //#include <ArduinoSTL.h>
 //using namespace std;
 
+// analog sensors
 int lightPin = A0;
 int resistorPin = A1;
 int linePin = A2;
@@ -12,6 +13,13 @@ int distPin = A3;
 
 int buttonPin = 7;
 int servoPin = 3;
+
+// Motor 1
+int dir1PinA = 2;
+int dir2PinA = 4;
+int speedPinA = 5; // Needs to be a PWM pin to be able to control motor speed
+
+// RGB LED
 int redPin= 11;
 int greenPin = 9;
 int bluePin = 10;
@@ -19,7 +27,6 @@ int bluePin = 10;
 int lightVal, resistorVal, buttonVal, lastButtonVal, lineVal, distVal, sensorVal, actuatorVal;
 int buttonCounter = 0;
 int trainingNum = 0;
-long servoPos;
 bool buttonPressed, buttonHeld, trainingDone = false;
 double scale = .7;
 
@@ -36,8 +43,12 @@ void setup() {
     pinMode(redPin, OUTPUT);
     pinMode(greenPin, OUTPUT);
     pinMode(bluePin, OUTPUT);
-    Serial.write("running");
+
+    pinMode(dir1PinA,OUTPUT);
+    pinMode(dir2PinA,OUTPUT);
+    pinMode(speedPinA,OUTPUT);
     
+    Serial.write("running");
     servo.attach(servoPin);
 }
 
@@ -48,9 +59,8 @@ void loop() {
     buttonVal = digitalRead(buttonPin);
     lineVal = analogRead(linePin);
     distVal = analogRead(distPin);
-    servoPos = map(resistorVal, 0, 1023, 0, 180);
-//    servoPos = map(lightVal, 10, 800, 0, 180);
-//    servoPos = resistorVal;
+    sensorVal = lightVal;
+    actuatorVal = resistorVal;
   
 //    print values
 //    Serial.println(lightVal);
@@ -59,36 +69,50 @@ void loop() {
 //      Serial.println(lineVal);
 //      Serial.println(distVal);  
 //    Serial.println(servoPos);
-    servo.write(servoPos);
-
-
-
-    sensorVal = lightVal;
-    actuatorVal = resistorVal;
 
     buttonHeld = (not buttonVal and lastButtonVal and buttonCounter > 15);
     buttonPressed = (not buttonVal and lastButtonVal and not buttonHeld);
     if (buttonHeld) {
-      trainingDone = not trainingDone;
-      Serial.println("button held");
-      buttonCounter = 0;
+        trainingDone = not trainingDone;
+        Serial.println("button held");
+        buttonCounter = 0;
     } 
+    
     if (buttonVal) {
 //        RGBcolor("white");
         buttonCounter++;
-        Serial.println(buttonCounter);
+//        Serial.println(buttonCounter);
     }
+    else
+        buttonCounter = 0;
+    
     if (trainingDone) {
         RGBcolor("green");
-
-//        int closest;
-//        minDiff = abs(sensorArray[0] - sensor)
-//        int actuatorPos;
-//        for (int i = 1; i < trainingNum; i++) {
-//            
-          
+    
+        int closestPos = 0;
+        int minDiff = abs(sensorArray[0] - sensorVal);
+        for (int i = 0; i < trainingNum; i++) {
+            if (abs(sensorArray[i] - sensorVal) < minDiff) {
+                minDiff = sensorArray[i] - sensorVal;
+                closestPos = i;
+            }
         }
-    else if (buttonPressed) {
+        actuatorVal = actuatorArray[closestPos];
+//        Serial ray, trainingNum);
+        writeActuator(actuatorVal);
+
+        if (buttonPressed) {
+          Serial.println("==============================");
+          Serial.println("actual sensor value: " + String(sensorVal));
+          Serial.println("closest sensor value: " + String(sensorArray[closestPos]));
+          Serial.println("actuator value: " + String(actuatorVal));
+          Serial.print("sensor array: ");
+          printArr(sensorArray, trainingNum);  
+          Serial.print("actuator array: ");
+          printArr(actuatorArray, trainingNum);
+        }
+          
+    } else if (buttonPressed) {
         blinkColor("purple", 2);
         sensorArray[trainingNum] = sensorVal;
         actuatorArray[trainingNum] = actuatorVal;
@@ -99,24 +123,37 @@ void loop() {
         printArr(sensorArray, trainingNum);  
         printArr(actuatorArray, trainingNum);        
       
-    }
-    else {
+    } else {
         RGBcolor("blue");
-        buttonCounter = 0;
+        writeActuator(actuatorVal);
     }
-      
-
     delay(30);
     lastButtonVal = buttonVal;
 }
 
 void printArr(int arr[], int limit) {
   for (int i =0; i < limit; i++)
-      Serial.print(arr[i] + ", ");
-  Serial.prinln()
+      Serial.print(String(arr[i]) + ", ");
+  Serial.println();
 }
 
+void writeActuator(int val) {
+//      dc motor
+//    val = map(val, 0, 1023, -255, 255);
+//    analogWrite(speedPinA, abs(val));
+//    if (val > 0) {
+//        digitalWrite(dir1PinA, LOW);
+//        digitalWrite(dir2PinA, HIGH);
+//    }
+//    else {
+//        digitalWrite(dir1PinA, HIGH);
+//        digitalWrite(dir2PinA, LOW);
+//    }
 
+//      servo
+      val = map(val, 0, 1023, 0, 180);
+      servo.write(val);
+}
 void blinkColor(String color, int num) {
   int delayNum = 200;
   for (int i = 0; i < num; i++) {
