@@ -2,6 +2,8 @@
 
 */
 #include <Servo.h>
+//#include <ArduinoSTL.h>
+//using namespace std;
 
 int lightPin = A0;
 int resistorPin = A1;
@@ -10,14 +12,20 @@ int distPin = A3;
 
 int buttonPin = 7;
 int servoPin = 3;
-int lightVal, resistorVal, buttonVal, lastButtonVal, lineVal, distVal;
-int buttonCounter = 0;
-long servoPos;
-bool buttonPressed, buttonHeld, trainingDone = false;
 int redPin= 11;
 int greenPin = 9;
 int bluePin = 10;
+
+int lightVal, resistorVal, buttonVal, lastButtonVal, lineVal, distVal, sensorVal, actuatorVal;
+int buttonCounter = 0;
+int trainingNum = 0;
+long servoPos;
+bool buttonPressed, buttonHeld, trainingDone = false;
 double scale = .7;
+
+const int ELEMENT_COUNT_MAX = 50;
+int sensorArray[ELEMENT_COUNT_MAX];
+int actuatorArray[ELEMENT_COUNT_MAX];
 
 Servo servo;
 
@@ -49,34 +57,65 @@ void loop() {
 //    Serial.println(resistorVal);
 //    Serial.println(buttonVal);
 //      Serial.println(lineVal);
-      Serial.println(distVal);
+//      Serial.println(distVal);  
 //    Serial.println(servoPos);
     servo.write(servoPos);
 
+
+
+    sensorVal = lightVal;
+    actuatorVal = resistorVal;
+
     buttonHeld = (not buttonVal and lastButtonVal and buttonCounter > 15);
     buttonPressed = (not buttonVal and lastButtonVal and not buttonHeld);
-    if (buttonHeld)
+    if (buttonHeld) {
       trainingDone = not trainingDone;
-      
+      Serial.println("button held");
+      buttonCounter = 0;
+    } 
     if (buttonVal) {
-        RGBcolor("white");
+//        RGBcolor("white");
         buttonCounter++;
+        Serial.println(buttonCounter);
     }
-    else if (not buttonHeld) {
-        RGBcolor("none");
+    if (trainingDone) {
+        RGBcolor("green");
+
+//        int closest;
+//        minDiff = abs(sensorArray[0] - sensor)
+//        int actuatorPos;
+//        for (int i = 1; i < trainingNum; i++) {
+//            
+          
+        }
+    else if (buttonPressed) {
+        blinkColor("purple", 2);
+        sensorArray[trainingNum] = sensorVal;
+        actuatorArray[trainingNum] = actuatorVal;
+
+        trainingNum++;
+//      train(sensor, acutator);
+
+        printArr(sensorArray, trainingNum);  
+        printArr(actuatorArray, trainingNum);        
+      
+    }
+    else {
+        RGBcolor("blue");
         buttonCounter = 0;
     }
       
 
-    if (trainingDone and not buttonVal)
-      RGBcolor("green");
-    else if (buttonPressed) {
-      blinkColor("purple", 2);
-    }
-
     delay(30);
     lastButtonVal = buttonVal;
 }
+
+void printArr(int arr[], int limit) {
+  for (int i =0; i < limit; i++)
+      Serial.print(arr[i] + ", ");
+  Serial.prinln()
+}
+
 
 void blinkColor(String color, int num) {
   int delayNum = 200;
@@ -86,6 +125,7 @@ void blinkColor(String color, int num) {
       delay(delayNum);
       RGBcolor("none");
   }
+  delay(delayNum);
 }
 
 void RGBcolor(String color) {
@@ -99,6 +139,10 @@ void RGBcolor(String color) {
     RGBcolor(255, 0, 255);
   else if (color == "white")
     RGBcolor(255, 255, 255);
+//  else if (color == "yellow")
+//    RGBcolor(0, 255, 255);
+//  else if (color == "white")
+//    RGBcolor(255, 255, 255);
   else if (color == "none")
     RGBcolor(0, 0, 0);
 }
